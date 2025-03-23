@@ -1,6 +1,5 @@
-import { EPages } from '../../enums';
 import { StoreReducer } from '../../reducers/store-reducer.types';
-import { useEffect, useReducer, useState } from 'react';
+import { useEffect, useReducer } from 'react';
 import { storeReducer } from '../../reducers/store-reducer';
 import { storeData } from '../../utils/storage';
 import Categories from '../../components/categories/Categories';
@@ -9,11 +8,11 @@ import WishList from '../../components/wish-list/WishList';
 import AddProduct from '../../components/add-product/AddProduct';
 import Header from '../../components/header/Header';
 import CartProvider from '../../providers/cart-provider';
+import { Navigate, Route, Routes, useNavigate } from 'react-router';
 
 const Home = () => {
     const [state, dispatch] = useReducer(storeReducer, { isInitialized: false, productList: [], wishList: [] });
-    const [currentPage, setCurrentPage] = useState<EPages>(EPages.CATEGORIES);
-
+    const navigate = useNavigate();
     useEffect(() => {
         if (!state.isInitialized) {
             dispatch({ type: StoreReducer.EActionTypes.INIT });
@@ -34,32 +33,30 @@ const Home = () => {
 
     const handleAddProduct = (product: Store.IProduct) => {
         dispatch({ type: StoreReducer.EActionTypes.ADD_PRODUCT, payload: { product } })
-        setCurrentPage(EPages.LIST);
+        navigate("/add");
     }
     return (
         <CartProvider>
-            <Header
-                productsCount={state.productList.length}
-                onNavigate={(page: EPages) => setCurrentPage(page)}
-                currentPage={currentPage}
-            />
-            {currentPage === EPages.CATEGORIES && <Categories />}
-            {currentPage === EPages.WISH && (
-                <WishList
-                    wishList={state.wishList}
-                    productList={state.productList}
-                    onRemove={(id) => dispatch({ type: StoreReducer.EActionTypes.TOGGLE_WISHLIST, payload: { id } })}
+            <Header />
+            <Routes>
+                <Route index element={<Navigate to="categories" />} />
+                <Route path="categories" element={<Categories />} />
+                <Route path="wish" element={
+                    <WishList
+                        wishList={state.wishList}
+                        productList={state.productList}
+                        onRemove={(id) => dispatch({ type: StoreReducer.EActionTypes.TOGGLE_WISHLIST, payload: { id } })}
+                    />} />
+                <Route path="/add" element={<AddProduct onAdd={handleAddProduct} />} />
+                <Route path="/list" element={
+                    <ProductsList
+                        data={state.productList}
+                        wishList={state.wishList}
+                        onWish={(id) => dispatch({ type: StoreReducer.EActionTypes.TOGGLE_WISHLIST, payload: { id } })}
+                        onDelete={(id) => dispatch({ type: StoreReducer.EActionTypes.DELETE_PRODUCT, payload: { id } })}
+                    />}
                 />
-            )}
-            {currentPage === EPages.ADD && <AddProduct onAdd={handleAddProduct} />}
-            {currentPage === EPages.LIST && (
-                <ProductsList
-                    data={state.productList}
-                    wishList={state.wishList}
-                    onWish={(id) => dispatch({ type: StoreReducer.EActionTypes.TOGGLE_WISHLIST, payload: { id } })}
-                    onDelete={(id) => dispatch({ type: StoreReducer.EActionTypes.DELETE_PRODUCT, payload: { id } })}
-                />
-            )}
+            </Routes>
         </CartProvider>
     )
 }
